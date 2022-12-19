@@ -1,9 +1,12 @@
 package main
 
 import (
-	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"net/url"
+	"os"
+	"path"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -31,8 +34,9 @@ func main() {
 		}
 	})
 
-	for _, url := range urls {
-		fmt.Println(url)
+	err = downloadImages(urls)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -58,4 +62,31 @@ func getUrlBase(rawURL string) (string, error) {
 		return "", err
 	}
 	return parsedUrl.Scheme + "://" + parsedUrl.Host, nil
+}
+
+func downloadImages(urls []string) error {
+	err := os.Mkdir("images", 0755)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+	err = os.Chdir("images")
+	if err != nil {
+		return err
+	}
+	for _, url := range urls {
+		base := path.Base(url)
+		f, err := os.Create(base)
+		if err != nil {
+			log.Default().Println(err)
+			continue
+		}
+		defer f.Close()
+		resp, err := http.Get(url)
+		if err != nil {
+			log.Default().Println(err)
+			continue
+		}
+		io.Copy(f, resp.Body)
+	}
+	return nil
 }
