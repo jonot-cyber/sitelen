@@ -1,23 +1,26 @@
 package main
 
 import (
+	"flag"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
 func main() {
-	var requestURL = "https://www.omniglot.com/conscripts/sitelenpona.htm"
-	requestBase, err := getUrlBase(requestURL)
+	var requestURL = flag.String("url", "https://www.google.com", "The url to scrape")
+	flag.Parse()
+	requestBase, err := getUrlBase(*requestURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	doc, err := goquery.NewDocument(requestURL)
+	doc, err := goquery.NewDocument(*requestURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,20 +76,29 @@ func downloadImages(urls []string) error {
 	if err != nil {
 		return err
 	}
+
+	var w sync.WaitGroup
+	w.Add(len(urls))
 	for _, url := range urls {
-		base := path.Base(url)
-		f, err := os.Create(base)
-		if err != nil {
-			log.Default().Println(err)
-			continue
-		}
-		defer f.Close()
-		resp, err := http.Get(url)
-		if err != nil {
-			log.Default().Println(err)
-			continue
-		}
-		io.Copy(f, resp.Body)
+		url := url
+		go downloadImage(url, &w)
 	}
+	w.Wait()
+	return nil
+}
+
+func downloadImage(url string, wg *sync.WaitGroup) error {
+	defer wg.Done()
+	base := path.Base(url)
+	f, err := os.Create(base)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	io.Copy(f, resp.Body)
 	return nil
 }
