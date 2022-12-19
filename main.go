@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -23,8 +22,12 @@ func main() {
 	var urls []string
 	doc.Find("*").Each(func(i int, s *goquery.Selection) {
 		url, exists := s.Attr("src")
-		if exists {
-			urls = append(urls, processUrl(requestBase, url))
+		if exists && s.Is("img") {
+			processedURL, err := processUrl(requestBase, url)
+			if err != nil {
+				log.Fatal(err)
+			}
+			urls = append(urls, processedURL)
 		}
 	})
 
@@ -34,12 +37,19 @@ func main() {
 }
 
 // processUrl converts relative urls to absolute urls
-func processUrl(base, url string) string {
-	if strings.HasPrefix(url, "/") {
-		// relative
-		return base + url
+func processUrl(base, path string) (string, error) {
+	switch path[0] {
+	case '/':
+		return base + path, nil
+	case '.':
+		parse, err := url.Parse(base)
+		if err != nil {
+			return "", err
+		}
+		return parse.JoinPath(path).String(), nil
+	default:
+		return path, nil
 	}
-	return url
 }
 
 func getUrlBase(rawURL string) (string, error) {
