@@ -20,7 +20,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	doc, err := goquery.NewDocument(*requestURL)
+	resp, err := http.Get(*requestURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
