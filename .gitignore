@@ -13,3 +13,6 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+# If you test out the binary with a folder, it wont get sent to git.
+images/
+oryxBuildBinary
